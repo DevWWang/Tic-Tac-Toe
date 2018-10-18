@@ -5,6 +5,7 @@
 #include "GameState.hpp"
 #include "PauseState.hpp"
 #include "GameOverState.hpp"
+#include "AI.hpp"
 
 namespace GameSpace
 {
@@ -16,7 +17,9 @@ namespace GameSpace
 	void GameState::Init()
 	{
 		gameState = STATE_PLAYING;
-		turn = PLAYER_PIECE;
+		turn = X_PIECE;
+
+		this->ai = new AI(turn, this->_data);
 
 		this->_data->assets.LoadTexture("Pause Button", PAUSE_BUTTON_FILEPATH);
 		this->_data->assets.LoadTexture("Grid Sprite", GRID_SPRITE_FILEPATH);
@@ -78,7 +81,7 @@ namespace GameSpace
 
 	void GameState::Update(float dt)
 	{
-		if (gameState == STATE_DRAW || gameState == STATE_LOSE || gameState == STATE_WON)
+		if (gameState == STATE_LOSE || gameState == STATE_WON)
 		{
 			if (this->_clock.getElapsedTime().asSeconds() > TIME_BEFORE_SHOWING_GAMEOVER)
 			{
@@ -132,7 +135,7 @@ namespace GameSpace
 		sf::Vector2f gapOutsideOfGird = sf::Vector2f((SCREEN_WIDTH - gridSize.width) / 2, (SCREEN_HEIGHT - gridSize.height) / 2);
 		
 		sf::Vector2f gridLocalTouchPosition = sf::Vector2f(touchPoint.x - gapOutsideOfGird.x, touchPoint.y - gapOutsideOfGird.y);
-		std::cout << gridLocalTouchPosition.x << ", " << gridLocalTouchPosition.y << std::endl;
+		//std::cout << gridLocalTouchPosition.x << ", " << gridLocalTouchPosition.y << std::endl;
 		
 		sf::Vector2f gridSectionSize = sf::Vector2f(gridSize.width / 3, gridSize.height / 3);
 
@@ -166,35 +169,26 @@ namespace GameSpace
 		if (_gridArray[column - 1][row - 1] == EMPTY_PIECE)
 		{
 			_gridArray[column - 1][row - 1] = turn;
-			
-			if (turn == PLAYER_PIECE)
+			std::cout << "Playing = " << turn << std::endl;
+
+			if (turn == X_PIECE)
 			{
 				_gridPieces[column - 1][row - 1].setTexture(this->_data->assets.GetTexture("X Piece"));
 				CheckHasPlayerWon(turn);
-				turn = AI_PIECE;
+				turn = O_PIECE;
 			}
-			else if (turn == AI_PIECE)
+			else if (turn == O_PIECE)
 			{
 				_gridPieces[column - 1][row - 1].setTexture(this->_data->assets.GetTexture("O Piece"));
 				CheckHasPlayerWon(turn);
-				turn = PLAYER_PIECE;
+				turn = X_PIECE;
 			}
-
 			_gridPieces[column - 1][row - 1].setColor(sf::Color(255, 255, 255, 255));
 		}
 	}
 
 	void GameState::CheckHasPlayerWon(int player)
 	{
-		Check3PiecesForMatch(0, 0, 1, 0, 2, 0, player);
-		Check3PiecesForMatch(0, 1, 1, 1, 2, 1, player);
-		Check3PiecesForMatch(0, 2, 1, 2, 2, 2, player);
-		Check3PiecesForMatch(0, 0, 0, 1, 0, 2, player);
-		Check3PiecesForMatch(1, 0, 1, 1, 1, 2, player);
-		Check3PiecesForMatch(2, 0, 2, 1, 2, 2, player);
-		Check3PiecesForMatch(0, 0, 1, 1, 2, 2, player);
-		Check3PiecesForMatch(0, 2, 1, 1, 2, 0, player);
-
 		int emptyNum = 9;
 
 		for (int i = 0; i < 3; i++)
@@ -207,15 +201,24 @@ namespace GameSpace
 				}
 			}
 		}
+		std::cout << "Empty = " << emptyNum << std::endl;
 
-		// check if the game is draw
-		if (emptyNum == 0 && gameState != STATE_WON && gameState != STATE_LOSE)
+		Check3PiecesForMatch(0, 0, 1, 0, 2, 0, player);
+		Check3PiecesForMatch(0, 1, 1, 1, 2, 1, player);
+		Check3PiecesForMatch(0, 2, 1, 2, 2, 2, player);
+		Check3PiecesForMatch(0, 0, 0, 1, 0, 2, player);
+		Check3PiecesForMatch(1, 0, 1, 1, 1, 2, player);
+		Check3PiecesForMatch(2, 0, 2, 1, 2, 2, player);
+		Check3PiecesForMatch(0, 0, 1, 1, 2, 2, player);
+		Check3PiecesForMatch(0, 2, 1, 1, 2, 0, player);
+
+		if (emptyNum == 0 && gameState != STATE_WON)
 		{
-			gameState == STATE_DRAW;
+			gameState = STATE_LOSE;
 		}
 
 		// check if the game is over
-		if (gameState == STATE_DRAW || gameState == STATE_LOSE || gameState == STATE_WON)
+		if (gameState == STATE_LOSE || gameState == STATE_WON)
 		{
 			this->_clock.restart();
 		}
@@ -242,14 +245,7 @@ namespace GameSpace
 			_gridPieces[x2][y2].setTexture(this->_data->assets.GetTexture(winningPieceStr));
 			_gridPieces[x3][y3].setTexture(this->_data->assets.GetTexture(winningPieceStr));
 
-			if (pieceToCheck == PLAYER_PIECE)
-			{
-				gameState = STATE_WON;
-			}
-			else if (pieceToCheck == AI_PIECE)
-			{
-				gameState = STATE_LOSE;
-			}
+			gameState = STATE_WON;
 		}
 	}
 }
